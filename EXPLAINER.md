@@ -7,6 +7,7 @@
 
 - **Problem:** Families need fast, consistent answers to common school-policy questions, while staff need visibility into unanswered and sensitive requests.
 - **Users:** Prospective and enrolled families; front-office operators.
+- **Operator access:** Available to reviewers on request. The operator view is intentionally password-protected to demonstrate the access-control boundary.
 - **Live capabilities:** Grounded policy Q&A, citations, clarification, escalation, bilingual UX, feedback, and an operator knowledge workflow.
 - **Safety boundary:** The assistant handles general published policy only; it does not access student records or resolve sensitive matters.
 - **Architecture:** Next.js + Vercel, Anthropic Claude structured output, Google Drive policy ingestion, operator-managed knowledge base.
