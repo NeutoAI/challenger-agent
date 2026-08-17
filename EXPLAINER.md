@@ -7,6 +7,8 @@
 
 An AI front desk for Challenger School – Berryessa: a parent-facing chat that answers general center-policy questions (hours, tuition, uniforms, pickup, illness, etc.), and an operator control center where staff review what's being asked, publish new knowledge, and resolve items the assistant couldn't handle. It's an unofficial prototype built for a job-application exercise — not affiliated with, endorsed by, or operated by Challenger School — using the school's real, published policies as content so the demo reflects a genuine use case rather than invented data.
 
+I picked Challenger School – Berryessa specifically instead of a hypothetical school because it's personal: my own child is starting Kindergarten there on August 17, and the questions this prototype answers — pickup times, late fees, what happens if we forget lunch, and so on — are exactly the ones we'd otherwise be asking a teacher directly. Building against a real school's real policies made this feel like solving an actual problem rather than a synthetic exercise.
+
 ## The trust mechanic
 
 The parent chat is powered by Anthropic Claude, but it never free-answers. Every model turn is forced through a single structured tool call (`respond_to_parent`) that must return one of three modes:
@@ -31,7 +33,7 @@ This app started as a deterministic keyword matcher and was migrated to the LLM 
 
 **Operator authentication** — `/operator` is gated by a shared password behind Next.js's request-level Proxy, with a signed, expiring session cookie.
 
-**Degraded-mode fallback** — if Claude is unconfigured or unavailable (missing/invalid key, API error, malformed output), `/api/chat` falls back to a deterministic keyword-matching engine (`lib/matcher.ts`) instead of a single generic "can't answer" message. It's grounded in the same real, operator-published knowledge base, so confirmed answers and safe escalation stay available without the LLM — with the honest trade-off that it has no true multi-turn memory, doesn't translate, and (see Known limitations below) has no real precedence logic between competing records.
+**Degraded-mode fallback** — if Claude is unconfigured or unavailable (missing/invalid key, API error, malformed output), `/api/chat` falls back to a deterministic keyword-matching engine (`lib/matcher.ts`) instead of a single generic "can't answer" message. It's grounded in the same real, operator-published knowledge base, so confirmed answers and safe escalation stay available without the LLM — with the honest trade-off that it has no true multi-turn memory, doesn't translate, and has no real precedence logic between competing records.
 
 **Google Drive policy sync** — a real integration, not a simulation. A Google Cloud service account (read-only, scoped to Drive) is shared as Viewer on one operator-designated Drive folder. Clicking **Sync now** in the "Policy source: Google Drive folder" card (Knowledge Base tab) calls `POST /api/drive-sync`, a server route that holds the service-account credentials and:
 
@@ -42,7 +44,7 @@ This app started as a deterministic keyword matcher and was migrated to the LLM 
 
 If the sync fails for any reason (missing/invalid credentials, a Drive API error, the folder being unreachable), the card shows the error directly and the knowledge base is left untouched — it deliberately never falls back to placeholder data, since an operator relying on "what's currently approved" should see a clear failure, not something that quietly looks fine.
 
-The system prompt separately instructs the model: when multiple approved records could plausibly answer the same question, prefer the one with the later effective date, and prefer the more specific record over a general one. This precedence logic is intentionally *not* duplicated in the sync route — `lib/drive/sync.ts` just gets the right records into the knowledge base with the right `effectiveDate`/`category`; picking which one wins for a given question is left entirely to the already-shipped, eval-tested (`policy-sync-precedence`) prompt instruction in `lib/llm/systemPrompt.ts`. **This precedence reasoning only runs when the LLM path is active** — see Known limitations.
+The system prompt separately instructs the model: when multiple approved records could plausibly answer the same question, prefer the one with the later effective date, and prefer the more specific record over a general one. This precedence logic is intentionally *not* duplicated in the sync route — `lib/drive/sync.ts` just gets the right records into the knowledge base with the right `effectiveDate`/`category`; picking which one wins for a given question is left entirely to the already-shipped, eval-tested (`policy-sync-precedence`) prompt instruction in `lib/llm/systemPrompt.ts`.
 
 Document format an operator must follow when adding a policy to the folder:
 
@@ -61,7 +63,6 @@ we'll provide a simple meal from the campus kitchen for a $6 fee, added to your 
 
 ## Known limitations
 
-- **The LLM path currently isn't live in production** — `ANTHROPIC_API_KEY` is unset in Vercel, so every chat request runs through the degraded-mode deterministic matcher, not Claude. This is an operational gap (an API key needs to be added to Vercel's env vars), not a code gap — but it matters concretely: the deterministic matcher has no precedence reasoning, so it can pick an older/more general policy over a newer/more specific one on a tie (confirmed during testing: a fresh, grade-unspecified pickup-fee question tied 3-to-3 between a general and a Kindergarten-specific record, and array order — not effective date — broke the tie). The real precedence logic exists and is eval-tested, it just needs the model actually running to take effect.
 - **State lives in browser `localStorage`, not a shared database.** Two devices, or two operators, don't see each other's edits. This is a deliberate scope choice for a single-browser demo, not an oversight.
 - **No audit trail beyond what's shown to parents.** The question log captures the exact answer a parent saw, but there's no durable record of raw model behavior over time for an operator to spot-check drift.
 - **Auth is one shared password, not per-operator accounts** — adequate for closing the open-access gap, but there's no attribution of who published what.
@@ -69,16 +70,12 @@ we'll provide a simple meal from the campus kitchen for a $6 fee, added to your 
 
 ## What's left to explore in the next version
 
-**Turn the LLM path on and keep it observably on.** Set `ANTHROPIC_API_KEY` in production and add a visible operator-facing indicator of which engine actually answered a given question (LLM vs. degraded fallback) — today that distinction is invisible to both the operator and the parent, which is the riskiest gap of everything listed here since it silently degrades the product's core "smart precedence" promise.
-
-**Scheduled/event-driven Drive ingestion**, replacing the manual "Sync now" click — either polling every 5–10 minutes via the Drive API (comparing `modifiedTime`) or push-based ingestion via the Drive Changes API's `changes.watch()`, so a newly-approved document is live without anyone needing to remember to click a button.
-
-**Broader document support** — PDF/Word upload parsing in addition to native Google Docs, and folder recursion with an explicit approved/archive convention instead of "everything directly in this one flat folder is live."
-
-**Server-side LLM audit logging.** A durable, operator-reviewable log of raw model responses — success and failure — independent of the parent-facing question log, so drift in grounding behavior is visible over time rather than only discoverable by manually clicking through the UI. Shape: one new `llm_logs` table, a non-blocking write on both paths of `/api/chat`, a simple viewer panel in `/operator`.
-
-**A real backend.** Replacing per-browser `localStorage` with Vercel Postgres + Drizzle (rejected a KV-blob approach — every write would read-and-rewrite the entire state with no real concurrency safety, and rejected log-drain-only observability — it doesn't give a reviewable UI surface). Per-record updates instead of whole-state overwrites; the operator's current publish→resolve→announce chain folded into one transactional route to avoid a new partial-failure class; short-interval polling to preserve the "operator publishes → parent sees it without a refresh" property; and, as a natural side effect, moving grounding to be read server-side instead of trusted from the client request, closing a low-stakes but real trust-boundary gap in `/api/chat` today.
-
-**Per-operator accounts**, replacing the single shared password, so published/resolved actions carry real attribution instead of a hardcoded name.
-
-The audit-logging and real-backend items share the same dependency — standing up a production database — which is why they're scoped as next-version work rather than built into this pass.
+1. **Actual backend DB.** Move state to a real backend, replacing browser-local `localStorage` with a database such as Vercel Postgres plus Drizzle. This is required for shared knowledge, multi-device consistency, durable operator work, and server-side grounding.
+2. **Mobile optimization.**
+3. **Durable LLM audit logs.** Persist raw model outputs, tool decisions, failures, citations used, and fallback activation. The current parent-visible question log is useful, but it's insufficient for drift monitoring, compliance review, or debugging.
+4. **Automate Drive ingestion.** Replace manual "Sync now" with scheduled polling or Drive change notifications, while retaining clear sync status and failure visibility.
+5. **Support more source formats.** Add PDF and Word ingestion, then consider controlled recursive folders with explicit approved versus archive conventions.
+6. **Use real operator identities.** Replace the shared password with individual accounts, roles, and attribution for publishing, editing, resolving, and syncing actions.
+7. **Run evaluations in CI.** Make `npm run evals` a pull-request and pre-deploy gate, with failure blocking for fabrication, sensitive-topic handling, and policy-precedence regressions.
+8. **Add production monitoring.** Track LLM error rate, fallback rate, handoff rate, unanswered-question rate, Drive-sync freshness, and time-to-resolution for queued questions.
+9. **Test persistence and concurrency.** Once a database exists, add tests for simultaneous edits, publish-to-parent propagation, atomic queue-resolution workflows, and rollback/recovery behavior.
