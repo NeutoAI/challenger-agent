@@ -27,20 +27,29 @@ export type ParseResult = { ok: true; doc: ParsedPolicyDoc } | { ok: false; reas
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /** Parses the front-matter block described in the plan: a `key: value` block terminated by
- * a line containing only `---`, followed by the policy body verbatim. Deliberately hand-
- * rolled rather than pulling in a YAML library — the format here is flat key/value pairs,
- * not general YAML, so a full parser would be more surface area than the format needs. */
+ * a line containing only `---`, followed by the policy body verbatim. An optional leading
+ * `---` line (standard Jekyll/Hugo-style front matter) is also accepted — only the trailing
+ * separator that ends the block is required. Deliberately hand-rolled rather than pulling in
+ * a YAML library — the format here is flat key/value pairs, not general YAML, so a full parser
+ * would be more surface area than the format needs. */
 export function parsePolicyDoc(text: string, fileName: string): ParseResult {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
-  const separatorIdx = lines.findIndex((line) => line.trim() === "---");
-  if (separatorIdx === -1) {
+  const fieldsStart = lines[0]?.trim() === "---" ? 1 : 0;
+  const relativeSeparatorIdx = lines.slice(fieldsStart).findIndex((line) => line.trim() === "---");
+  if (relativeSeparatorIdx === -1) {
     return { ok: false, reason: `${fileName}: missing "---" front-matter separator` };
   }
+  const separatorIdx = fieldsStart + relativeSeparatorIdx;
 
   const fields: Record<string, string> = {};
-  for (const line of lines.slice(0, separatorIdx)) {
+  for (const line of lines.slice(fieldsStart, separatorIdx)) {
     const match = line.match(/^([a-zA-Z]+)\s*:\s*(.+)$/);
-    if (match) fields[match[1].toLowerCase()] = match[2].trim();
+    if (!match) continue;
+    // Values may optionally be wrapped in quotes (e.g. `title: "Some Title"`) — strip a
+    // matching pair so both quoted and bare values parse to the same result.
+    const raw = match[2].trim();
+    const unquoted = /^"(.*)"$/.test(raw) || /^'(.*)'$/.test(raw) ? raw.slice(1, -1) : raw;
+    fields[match[1].toLowerCase()] = unquoted;
   }
 
   const { title, category, effectivedate, audience, status } = fields;
