@@ -1,0 +1,623 @@
+import { CENTER, FALLBACK_TEXT } from "./constants";
+import type {
+  Announcement,
+  CalendarData,
+  EscalationRule,
+  FrontDeskState,
+  KnowledgeRecord,
+  QuestionLogEntry,
+} from "./types";
+
+const POLICY_SOURCE = "Challenger School Policies 2026–27 (California)";
+
+const KNOWLEDGE_RECORDS: KnowledgeRecord[] = [
+  {
+    id: "kr-hours",
+    title: "Office & Class Hours",
+    category: "hours",
+    keywords: [
+      "hours",
+      "open",
+      "close",
+      "closing time",
+      "opening time",
+      "what time",
+      "schedule",
+      "office hours",
+    ],
+    answer:
+      "The Berryessa office is open Monday–Friday, 7:00 a.m.–6:00 p.m. Kindergarten–Grade 8 classes run 8:00 a.m.–3:00 p.m.; drive-through arrival/departure windows vary by grade: Preschool 7:45–8:30 / 2:50–3:35, Kindergarten 8:20–8:35 / 3:25–3:40, Grade 1 8:15–8:30 / 3:20–3:35, Grades 2–3 8:00–8:15 / 3:05–3:20, Grades 4–8 7:45–8:00 / 2:50–3:05. We're closed weekends and on the school calendar's no-school days.",
+    sourceLabel: POLICY_SOURCE + " & Berryessa Arrival/Departure Info",
+    effectiveDate: "2026-08-01",
+    lastUpdatedBy: "Challenger School Region Office",
+    audience: "all",
+    sensitivity: "routine",
+    status: "approved",
+  },
+  {
+    id: "kr-tuition",
+    title: "Tuition & Fees by Program",
+    category: "tuition",
+    keywords: ["tuition", "cost", "price", "how much", "fee", "fees", "rate", "rates"],
+    answer:
+      "Here's the current rate for that program:\n\n{append}\n\nAcademic-year tuition is billed in equal monthly payments due by the 10th of each month. A 10% multiple-children discount and a 5% continuous-enrollment discount (K–8, second year+) may apply, and pre-payment discounts (1–2%) are available.",
+    sourceLabel: POLICY_SOURCE + " — Program Offerings and Costs",
+    effectiveDate: "2026-08-01",
+    lastUpdatedBy: "Challenger School Region Office",
+    audience: "all",
+    sensitivity: "routine",
+    status: "approved",
+    clarify: {
+      question: "Which program are you asking about?",
+      options: [
+        {
+          label: "Preschool (age 2¾–4)",
+          keywords: ["preschool", "infant", "baby", "toddler", "pre-k", "pre school"],
+          answerAppend:
+            "Preschool, All-Day (ages 2 years 9 months–4): $28,290/year — $2,829/month, $150.48/day, $700 tuition deposit. Note: Challenger does not enroll infants under 2 years 9 months — Preschool is our youngest program.",
+        },
+        {
+          label: "Kindergarten",
+          keywords: ["kindergarten", "kinder"],
+          answerAppend: "Kindergarten, All-Day: $26,620/year — $2,662/month, $141.60/day, $700 tuition deposit.",
+        },
+        {
+          label: "Grades 1–5",
+          keywords: ["grade 1", "grade 2", "grade 3", "grade 4", "grade 5", "1st grade", "elementary", "grades 1"],
+          answerAppend: "Grades 1–5, All-Day: $27,410/year — $2,741/month, $145.80/day, $700 tuition deposit.",
+        },
+        {
+          label: "Grades 6–8",
+          keywords: ["grade 6", "grade 7", "grade 8", "middle school", "6th grade", "7th grade", "8th grade"],
+          answerAppend: "Grades 6–8, All-Day: $29,730/year — $2,973/month, $158.14/day, $700 tuition deposit.",
+        },
+      ],
+    },
+  },
+  {
+    id: "kr-tours",
+    title: "Scheduling a Tour / Admissions",
+    category: "tours",
+    keywords: [
+      "tour",
+      "visit",
+      "see the campus",
+      "waitlist",
+      "wait list",
+      "enroll",
+      "enrollment",
+      "sign up",
+      "apply",
+      "admissions",
+    ],
+    answer:
+      "We'd love to show you Berryessa! A campus tour is the first step in admissions — a parent and prospective student visit so we can do interviews and initial evaluations before you complete an application. Tap below to schedule a tour, or call the office at " +
+      CENTER.phone +
+      ".",
+    sourceLabel: POLICY_SOURCE + " — Admissions and Enrollment",
+    effectiveDate: "2026-08-01",
+    lastUpdatedBy: "Challenger School Region Office",
+    audience: "prospective",
+    sensitivity: "routine",
+    status: "approved",
+    ctaLabel: "Schedule a tour",
+  },
+  {
+    id: "kr-illness",
+    title: "Illness Exclusion Policy",
+    category: "illness",
+    keywords: [
+      "fever",
+      "sick",
+      "ill ",
+      "illness",
+      "vomit",
+      "throwing up",
+      "diarrhea",
+      "contagious",
+      "cough",
+      "runny nose",
+      "pink eye",
+      "ear infection",
+    ],
+    answer:
+      "Per school health policy, a child should stay home if showing any of: fever of 100°F or above, vomiting, ear infection, diarrhea, a wet/wheezy cough with mucus, yellow/green nasal drainage, or an eye infection with yellow/green drainage or pink eye. A child may return with a doctor's note clearing them, or after being symptom-free for 24 hours without the aid of medication.\n\nThis is our attendance policy, not medical advice — please consult your pediatrician for medical decisions.",
+    sourceLabel: POLICY_SOURCE + " — Health and Safety",
+    effectiveDate: "2026-08-01",
+    lastUpdatedBy: "Challenger School Region Office",
+    audience: "enrolled",
+    sensitivity: "policy-guidance",
+    status: "approved",
+  },
+  {
+    id: "kr-medication",
+    title: "Medication Policy",
+    category: "medication",
+    keywords: [
+      "medicine",
+      "medication",
+      "give my child",
+      "epipen",
+      "inhaler",
+      "prescription",
+      "dose",
+      "tylenol",
+      "ibuprofen",
+    ],
+    answer:
+      "Challenger will administer medication, or supervise a student's self-administration, in compliance with our written procedures and applicable law. We strongly recommend scheduling medication with your physician so your child doesn't need to medicate during the school day. Contact your campus administrators with any questions.",
+    sourceLabel: POLICY_SOURCE + " — Health and Safety",
+    effectiveDate: "2026-08-01",
+    lastUpdatedBy: "Challenger School Region Office",
+    audience: "enrolled",
+    sensitivity: "policy-guidance",
+    status: "approved",
+  },
+  {
+    id: "kr-meals",
+    title: "Lunches",
+    category: "meals",
+    keywords: ["lunch", "meal", "snack", "menu", "food allerg", "allergic", "choicelunch", "breakfast"],
+    excludeKeywords: ["forgot", "didn't pack", "didnt pack", "didn't send", "didnt send", "no lunch", "without lunch"],
+    answer:
+      "Please send your child a nutritious lunch and a drink that doesn't need refrigeration or heating — no microwaves are available on campus. If it's easier for your family, Berryessa's lunch provider, Choicelunch, lets you order in advance at order.choicelunch.com.",
+    sourceLabel: POLICY_SOURCE + " — General Information",
+    effectiveDate: "2026-08-01",
+    lastUpdatedBy: "Challenger School Region Office",
+    audience: "enrolled",
+    sensitivity: "routine",
+    status: "approved",
+  },
+  {
+    id: "kr-pickup",
+    title: "Arrival, Pickup & Late Fees",
+    category: "pickup",
+    keywords: [
+      "pickup",
+      "pick up",
+      "drop off",
+      "late fee",
+      "late pickup",
+      "who can pick up",
+      "authorized pickup",
+      "visor card",
+      "sign in",
+      "sign out",
+    ],
+    answer:
+      "Pickup uses our drive-through process with a Challenger-issued visor card; anyone picking up must be on your child's pickup list or show photo ID (a visor card alone isn't official ID). Late pickup fees are tiered: 1–5 minutes late is $5, 6–10 minutes is $10, and 11+ minutes adds $5 per additional 5-minute increment before 6 p.m. (rates roughly triple after 6 p.m., and differ slightly for half-day preschool). Students not enrolled in extended classtime who are picked up late may be placed in extended classtime for the day at the daily rate.",
+    sourceLabel: POLICY_SOURCE + " — Arrival and Departure; Billing and Payment",
+    effectiveDate: "2026-08-01",
+    lastUpdatedBy: "Challenger School Region Office",
+    audience: "enrolled",
+    sensitivity: "routine",
+    status: "approved",
+  },
+  {
+    id: "kr-weather",
+    title: "Weather & Emergency Communications",
+    category: "weather",
+    keywords: [
+      "weather",
+      "snow",
+      "storm",
+      "emergency closure",
+      "closed today",
+      "closing early",
+      "power outage",
+    ],
+    answer:
+      "By enrolling, parents authorize Challenger to reach them about closures or schedule changes via email, text message, and phone call. If severe weather affects a school day, watch for a message through those channels and check the Parent Portal.",
+    sourceLabel: POLICY_SOURCE + " — General Information",
+    effectiveDate: "2026-08-01",
+    lastUpdatedBy: "Challenger School Region Office",
+    audience: "all",
+    sensitivity: "routine",
+    status: "approved",
+  },
+  {
+    id: "kr-uniform",
+    title: "Uniform Days & Requirements",
+    category: "uniform",
+    keywords: [
+      "uniform",
+      "dress code",
+      "what to wear",
+      "scholarwear",
+      "polo",
+      "standard uniform",
+      "special-function",
+      "picture day",
+    ],
+    answer:
+      "Preschoolers wear the standard uniform on Monday and Tuesday (they may wear it on other days too if you like); the special-function uniform is required for picture days, the Christmas Sing, and the Spring Program. Kindergarten–Grade 8 students wear the standard uniform Monday–Friday, with the special-function uniform for picture days, Christmas Sing, Spring Program, competition events, and assemblies. All uniform items must be purchased from ScholarWear.",
+    sourceLabel: POLICY_SOURCE + " — Student Uniform Policy",
+    effectiveDate: "2026-08-01",
+    lastUpdatedBy: "Challenger School Region Office",
+    audience: "enrolled",
+    sensitivity: "routine",
+    status: "approved",
+  },
+];
+
+const ESCALATION_RULES: EscalationRule[] = [
+  {
+    id: "esc-injury",
+    label: "Medical Emergency or Injury",
+    triggerKeywords: [
+      "hurt",
+      "injured",
+      "injury",
+      "bleeding",
+      "fell and",
+      "hit his head",
+      "hit her head",
+      "allergic reaction",
+      "choked",
+      "emergency",
+    ],
+    responseText:
+      "I can't assess a specific injury or medical situation — that needs a staff member who was there. Challenger doesn't employ school nurses, but administrators and teachers are trained in emergency procedures. I'm flagging this for {contactName}; please also call the campus directly at " +
+      CENTER.phone +
+      " if this is urgent.",
+    contactName: CENTER.director,
+    contactRole: "Headmaster",
+  },
+  {
+    id: "esc-conduct",
+    label: "Complaint or Staff Conduct Concern",
+    triggerKeywords: [
+      "complain",
+      "complaint",
+      "inappropriate",
+      "yelled at",
+      "rude",
+      "concerned about a teacher",
+      "report a teacher",
+      "staff member did",
+    ],
+    responseText:
+      "Concerns like this deserve a direct conversation, not an automated reply. I've flagged this for {contactName}. If it isn't resolved to your satisfaction by the campus, you can also contact " +
+      CENTER.regionDirector +
+      " at " +
+      CENTER.regionDirectorPhone +
+      ".",
+    contactName: CENTER.director,
+    contactRole: "Headmaster",
+  },
+  {
+    id: "esc-custody",
+    label: "Custody or Domestic Dispute",
+    triggerKeywords: [
+      "custody",
+      "court order",
+      "restraining order",
+      "not allowed to pick up",
+      "legal guardian dispute",
+      "lawyer",
+      "divorce",
+      "visitation",
+    ],
+    responseText:
+      "Challenger staff can't get involved in family disputes, divorce, separation, custody, or visitation matters, and won't make judgments about either parent's suitability — access can't be denied without an appropriate court order on file. Please contact {contactName} to make sure the correct paperwork is on record.",
+    contactName: CENTER.director,
+    contactRole: "Headmaster",
+  },
+  {
+    id: "esc-billing",
+    label: "Account-Specific Billing Question",
+    triggerKeywords: [
+      "my bill",
+      "my invoice",
+      "my balance",
+      "overcharged",
+      "refund",
+      "charged twice",
+      "my account",
+      "edutrak",
+    ],
+    responseText:
+      "That touches your family's specific account — please check EduTrak or the Parent Portal first, or I'll route this to the campus office through a secure message rather than answering here.",
+    contactName: CENTER.director,
+    contactRole: "Headmaster",
+  },
+];
+
+const CALENDAR: CalendarData = {
+  hours: [
+    { day: "Monday", open: "7:00 AM", close: "6:00 PM" },
+    { day: "Tuesday", open: "7:00 AM", close: "6:00 PM" },
+    { day: "Wednesday", open: "7:00 AM", close: "6:00 PM" },
+    { day: "Thursday", open: "7:00 AM", close: "6:00 PM" },
+    { day: "Friday", open: "7:00 AM", close: "6:00 PM" },
+  ],
+  lastUpdatedBy: "Challenger School Region Office",
+  effectiveDate: "2026-08-01",
+  closures: [
+    {
+      id: "cl-labor",
+      label: "Labor Day",
+      aliases: ["labor day"],
+      date: "2026-09-07",
+      recurringAnnually: false,
+    },
+    {
+      id: "cl-thanksgiving",
+      label: "Thanksgiving Break",
+      aliases: ["thanksgiving"],
+      date: "2026-11-25",
+      endDate: "2026-11-27",
+      recurringAnnually: false,
+    },
+    {
+      id: "cl-winterbreak",
+      label: "Winter Break",
+      aliases: ["winter break", "christmas", "holiday break"],
+      date: "2026-12-21",
+      endDate: "2027-01-03",
+      recurringAnnually: false,
+    },
+    {
+      id: "cl-mlk",
+      label: "Martin Luther King, Jr. Day",
+      aliases: ["mlk", "martin luther king"],
+      date: "2027-01-18",
+      recurringAnnually: false,
+    },
+    {
+      id: "cl-presidents",
+      label: "Presidents' Day",
+      aliases: ["presidents day", "president's day", "washington's birthday"],
+      date: "2027-02-15",
+      recurringAnnually: false,
+    },
+    {
+      id: "cl-springbreak",
+      label: "Spring Break",
+      aliases: ["spring break"],
+      date: "2027-04-05",
+      endDate: "2027-04-09",
+      recurringAnnually: false,
+    },
+    {
+      id: "cl-memorial",
+      label: "Memorial Day",
+      aliases: ["memorial day"],
+      date: "2027-05-31",
+      recurringAnnually: false,
+    },
+  ],
+};
+
+function iso(now: Date, daysOffset: number, hour = 10, minute = 0): string {
+  const d = new Date(now);
+  d.setDate(d.getDate() - daysOffset);
+  d.setHours(hour, minute, 0, 0);
+  return d.toISOString();
+}
+
+function buildQuestionLog(now: Date): QuestionLogEntry[] {
+  const entries: Array<Omit<QuestionLogEntry, "id" | "timestamp"> & { daysAgo: number; hour: number }> = [
+    // Emergency-lunch cluster — intentionally unmatched, feeds the demo narrative
+    {
+      daysAgo: 10,
+      hour: 8,
+      text: "I forgot to pack my daughter's lunch, can you provide one today?",
+      answerText: FALLBACK_TEXT,
+      segment: "enrolled",
+      mode: "handoff",
+      category: "meals",
+      needsAttention: true,
+      attentionReason: "unmatched",
+      attentionResolved: false,
+    },
+    {
+      daysAgo: 7,
+      hour: 8,
+      text: "Do you have lunch on hand if we forget to pack one?",
+      answerText: FALLBACK_TEXT,
+      segment: "enrolled",
+      mode: "handoff",
+      category: "meals",
+      needsAttention: true,
+      attentionReason: "unmatched",
+      attentionResolved: false,
+    },
+    {
+      daysAgo: 4,
+      hour: 9,
+      text: "What happens if we don't send food for the day?",
+      answerText: FALLBACK_TEXT,
+      segment: "enrolled",
+      mode: "handoff",
+      category: "meals",
+      needsAttention: true,
+      attentionReason: "unmatched",
+      attentionResolved: false,
+    },
+    {
+      daysAgo: 2,
+      hour: 8,
+      text: "Can the campus provide a meal same-day if we forgot?",
+      answerText: FALLBACK_TEXT,
+      segment: "enrolled",
+      mode: "handoff",
+      category: "meals",
+      needsAttention: true,
+      attentionReason: "unmatched",
+      attentionResolved: false,
+    },
+    // Labor Day / hours cluster — resolved via date-aware calendar reasoning
+    {
+      daysAgo: 6,
+      hour: 11,
+      text: "Are you open on Labor Day?",
+      answerText: "We'll be closed on Monday, September 7, 2026 for Labor Day. Regular hours resume the next business day, 7:00 AM – 6:00 PM.",
+      segment: "enrolled",
+      mode: "policy",
+      category: "hours",
+      matchedRecordId: "kr-hours",
+      needsAttention: false,
+      attentionResolved: false,
+      feedback: "up",
+    },
+    {
+      daysAgo: 3,
+      hour: 15,
+      text: "Is the campus closed for Labor Day weekend?",
+      answerText: "We're closed Saturday and Sunday as usual, plus Monday, September 7, 2026 for Labor Day.",
+      segment: "enrolled",
+      mode: "policy",
+      category: "hours",
+      matchedRecordId: "kr-hours",
+      needsAttention: false,
+      attentionResolved: false,
+      feedback: "up",
+    },
+    {
+      daysAgo: 1,
+      hour: 17,
+      text: "Will you be open the Friday before Labor Day?",
+      answerText: "Yes — we're open on Friday, September 4, 2026, 7:00 AM – 6:00 PM. No closures are scheduled for that date.",
+      segment: "enrolled",
+      mode: "policy",
+      category: "hours",
+      matchedRecordId: "kr-hours",
+      needsAttention: false,
+      attentionResolved: false,
+    },
+    // Pickup cluster
+    {
+      daysAgo: 5,
+      hour: 16,
+      text: "What's the late pickup fee?",
+      answerText: "Late pickup fees are tiered: 1–5 minutes late is $5, 6–10 minutes is $10, and 11+ minutes adds $5 per additional 5-minute increment before 6 p.m.",
+      segment: "enrolled",
+      mode: "policy",
+      category: "pickup",
+      matchedRecordId: "kr-pickup",
+      needsAttention: false,
+      attentionResolved: false,
+      feedback: "up",
+    },
+    {
+      daysAgo: 2,
+      hour: 12,
+      text: "Can I add my sister as an authorized pickup?",
+      answerText: "Anyone picking up must be on your child's pickup list or show photo ID. You can update your authorized pickup list through the campus office.",
+      segment: "enrolled",
+      mode: "policy",
+      category: "pickup",
+      matchedRecordId: "kr-pickup",
+      needsAttention: false,
+      attentionResolved: false,
+    },
+    // Tuition & tours
+    {
+      daysAgo: 9,
+      hour: 13,
+      text: "What is the tuition for infants?",
+      answerText: "Challenger does not enroll infants under 2 years 9 months — Preschool is our youngest program, at $28,290/year ($2,829/month).",
+      segment: "prospective",
+      mode: "policy",
+      category: "tuition",
+      matchedRecordId: "kr-tuition",
+      needsAttention: false,
+      attentionResolved: false,
+      feedback: "down",
+      feedbackText: "Wish it just showed all the prices at once instead of asking.",
+    },
+    {
+      daysAgo: 8,
+      hour: 10,
+      text: "How can I schedule a tour?",
+      answerText: "A campus tour is the first step in admissions — tap below to schedule one, or call the office.",
+      segment: "prospective",
+      mode: "policy",
+      category: "tours",
+      matchedRecordId: "kr-tours",
+      needsAttention: false,
+      attentionResolved: false,
+      feedback: "up",
+    },
+    // Illness
+    {
+      daysAgo: 3,
+      hour: 7,
+      text: "My son has a runny nose, can he still come in today?",
+      answerText: "A child should stay home with yellow/green nasal drainage, but a plain runny nose without other symptoms is generally fine — use your judgment and consult your pediatrician if unsure.",
+      segment: "enrolled",
+      mode: "policy",
+      category: "illness",
+      matchedRecordId: "kr-illness",
+      needsAttention: false,
+      attentionResolved: false,
+      feedback: "up",
+    },
+    // Sensitive escalations
+    {
+      daysAgo: 5,
+      hour: 16,
+      text: "My child fell and hurt his arm today, is he ok?",
+      answerText: "I can't assess a specific injury — that needs a staff member who was there. I'm flagging this for Tina Nguyen, Headmaster; please also call the campus directly if this is urgent.",
+      segment: "enrolled",
+      mode: "handoff",
+      category: "escalation",
+      escalationRuleId: "esc-injury",
+      needsAttention: true,
+      attentionReason: "sensitive",
+      attentionResolved: true,
+    },
+    {
+      daysAgo: 4,
+      hour: 18,
+      text: "I want to file a complaint about a teacher yelling at my kid",
+      answerText: "Concerns like this deserve a direct conversation, not an automated reply. I've flagged this for Tina Nguyen, Headmaster.",
+      segment: "enrolled",
+      mode: "handoff",
+      category: "escalation",
+      escalationRuleId: "esc-conduct",
+      needsAttention: true,
+      attentionReason: "sensitive",
+      attentionResolved: false,
+    },
+  ];
+
+  return entries.map((e, i) => ({
+    id: `seed-q${i + 1}`,
+    timestamp: iso(now, e.daysAgo, e.hour),
+    text: e.text,
+    answerText: e.answerText,
+    segment: e.segment,
+    mode: e.mode,
+    category: e.category,
+    matchedRecordId: e.matchedRecordId,
+    escalationRuleId: e.escalationRuleId,
+    needsAttention: e.needsAttention,
+    attentionReason: e.attentionReason,
+    attentionResolved: e.attentionResolved,
+    feedback: e.feedback ?? null,
+    feedbackText: e.feedbackText,
+  }));
+}
+
+const ANNOUNCEMENTS: Announcement[] = [];
+
+/** Signature of the built-in record/rule ids, used to detect when the shipped seed content
+ * has changed so it can be reconciled into an already-saved browser's state. */
+export function seedSignature(): string {
+  return KNOWLEDGE_RECORDS.map((r) => r.id).join(",") + "|" + ESCALATION_RULES.map((r) => r.id).join(",");
+}
+
+export function buildSeedState(now: Date = new Date()): FrontDeskState {
+  return {
+    centerName: CENTER.name,
+    knowledgeRecords: KNOWLEDGE_RECORDS,
+    escalationRules: ESCALATION_RULES,
+    calendar: CALENDAR,
+    questionLog: buildQuestionLog(now),
+    announcements: ANNOUNCEMENTS,
+    seedVersion: seedSignature(),
+    lastPolicySyncAt: null,
+  };
+}

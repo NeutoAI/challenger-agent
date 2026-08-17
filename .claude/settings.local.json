@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "Bash(npx --yes create-next-app@latest . --typescript --tailwind --eslint --app --no-src-dir --import-alias \"@/*\" --use-npm --turbopack --yes)",
+      "Read(//Users/vinaylocal/Documents/Claudecode/**)",
+      "Bash(npx --yes create-next-app@latest brightwheel-exercise-tmp --typescript --tailwind --eslint --app --no-src-dir --import-alias \"@/*\" --use-npm --turbopack --yes)",
+      "Bash(npx tsc *)",
+      "Bash(npx eslint *)",
+      "Bash(npm run *)",
+      "Bash(cat /tmp/deploy_files.json)",
+      "mcp__9bb4151f-9d4e-4628-9dee-807fd2278c03__deploy_to_vercel",
+      "mcp__9bb4151f-9d4e-4628-9dee-807fd2278c03__list_teams",
+      "mcp__9bb4151f-9d4e-4628-9dee-807fd2278c03__get_deployment",
+      "Bash(curl -sL \"https://drive.google.com/uc?id=18RhYBhpKn4vFQ112TzZV-vOnUYCLQGFl&export=download\" -o \"Challenger_Orientation_Packet.pdf\")",
+      "Bash(curl -sL \"https://drive.google.com/uc?id=1MCctTbCBq8eYikNHfqBd6CfIyyEzW4T4&export=download\" -o \"Berryessa_Info_Packet.pdf\")",
+      "Bash(curl -sL \"https://www.challengerschool.com/storage/app/uploads/public/6a7/a2d/435/6a7a2d435fc01419448418.pdf\" -o policies_a.pdf)",
+      "Bash(curl -sL \"https://www.challengerschool.com/storage/app/uploads/public/6a2/975/842/6a2975842e1a7901934446.pdf\" -o policies_b.pdf)",
+      "Bash(python3 -c ' *)",
+      "Bash(brew install *)",
+      "Bash(pdftotext -layout policies_a.pdf policies_a.txt)",
+      "mcp__9bb4151f-9d4e-4628-9dee-807fd2278c03__get_deployment_build_logs"
+    ]
+  }
+}
